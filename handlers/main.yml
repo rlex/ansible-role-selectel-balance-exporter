@@ -1,0 +1,5 @@
+- name: restart selectel balance exporter
+  systemd:
+    daemon_reload: true
+    name: selectel-balance-exporter
+    state: restarted

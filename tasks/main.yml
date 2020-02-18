@@ -1,0 +1,60 @@
+- name: create selectel_balance_exporter system group
+  group:
+    name: "{{ selectel_balance_exporter_user }}"
+    system: true
+    state: present
+
+- name: create selectel_balance_exporter system user
+  user:
+    name: "{{ selectel_balance_exporter_user }}"
+    system: true
+    shell: "/usr/sbin/nologin"
+    group: "{{ selectel_balance_exporter_user }}"
+    createhome: false
+
+- name: "Download selectel_balance_exporter files"
+  become: false
+  get_url:
+    url: "https://github.com/xxxcoltxxx/selectel-balance-exporter/releases/download/v{{selectel_balance_exporter_version}}/selectel_balance_exporter_v{{selectel_balance_exporter_version}}_linux_amd64.tar.gz"
+    dest: "/tmp/"
+  delegate_to: localhost
+
+- name: "Unarchive selectel_balance_exporter files"
+  become: false
+  unarchive:
+    src: "/tmp/selectel_balance_exporter_v{{selectel_balance_exporter_version}}_linux_amd64.tar.gz"
+    remote_src: yes
+    dest: /tmp/
+    creates: "/tmp/selectel_balance_exporter_v{{selectel_balance_exporter_version}}_linux_amd64"
+  delegate_to: localhost
+  check_mode: false
+
+- name: propagate selectel_balance_exporter binary
+  copy:
+    src: "/tmp/selectel_balance_exporter_v{{selectel_balance_exporter_version}}_linux_amd64"
+    dest: /usr/local/bin/selectel-balance-exporter
+    mode: 0755
+    owner: "{{ selectel_balance_exporter_user }}"
+    group: "{{ selectel_balance_exporter_user }}"
+  notify:
+    - restart selectel balance exporter
+
+- name: create systemd service unit
+  template:
+    src: selectel-balance-exporter.service.j2
+    dest: /etc/systemd/system/selectel-balance-exporter.service
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart selectel balance exporter
+
+- name: create env file
+  template:
+    src: selectel-balance-exporter.j2
+    dest: /etc/default/selectel-balance-exporter
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart selectel balance exporter
